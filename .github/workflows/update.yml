@@ -31,6 +31,7 @@ jobs:
             for BRANCH in "${BRANCHES[@]}"; do
               echo "  Updating branch: $BRANCH"
               git checkout $BRANCH
+              mkdir -p .github/workflows
               cp -r ../$WORKFLOW_DIR/.github/workflows/* .github/workflows/
               git add .github/workflows/
               git commit -m "Update workflows"
