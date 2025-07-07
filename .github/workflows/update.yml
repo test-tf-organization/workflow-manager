@@ -16,6 +16,8 @@ jobs:
           git config --global user.email "github-actions@github.com"
 
       - name: Loop update
+        env:
+            GH_TOKEN: ${{ secrets.PAT }}
         run: |
           REPOS=("ig-web-app" "ig-mobile-application" "ig-iot-service")
           BRANCHES=("qa" "uat" "prod")
@@ -23,7 +25,7 @@ jobs:
 
           for REPO in "${REPOS[@]}"; do
             echo "Processing $REPO"
-            git clone https://x-access-token:${{ secrets.PAT }}@github.com/test-tf-organization/$REPO.git
+            git clone https://x-access-token:${GH_TOKEN}@github.com/test-tf-organization/$REPO.git
             cd $REPO
 
             for BRANCH in "${BRANCHES[@]}"; do
