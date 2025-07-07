@@ -1,0 +1,40 @@
+name: Update Workflows Across Repos
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout management repo
+        uses: actions/checkout@v3
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+      - name: Loop update
+        run: |
+          REPOS=("ig-web-app" "ig-mobile-application" "ig-iot-service")
+          BRANCHES=("qa" "uat" "prod")
+          WORKFLOW_DIR="./new-workflows"
+
+          for REPO in "${REPOS[@]}"; do
+            echo "Processing $REPO"
+            git clone https://x-access-token:${GH_TOKEN}@github.com/your-org/$REPO.git
+            cd $REPO
+
+            for BRANCH in "${BRANCHES[@]}"; do
+              echo "  Updating branch: $BRANCH"
+              git checkout $BRANCH
+              cp -r $WORKFLOW_DIR/.github/workflows/* .github/workflows/
+              git add .github/workflows/
+              git commit -m "Update workflows"
+              git push origin $BRANCH
+            done
+
+            cd ..
+            rm -rf $REPO
+          done
