@@ -1,0 +1,223 @@
+name: Update Repositories with Github Workflow Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run in dry-run mode (no actual changes)"
+        required: false
+        default: false
+        type: boolean
+  push:
+    paths:
+      - ".github/workflows/update-repos.yml"
+      - "repo-workflows/**"
+
+env:
+  GH_TOKEN: ${{ secrets.GH_PAT }}
+
+jobs:
+  update-repositories:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: [
+            "ig-web-app",
+            "ig-docs",
+            "ig-analytics-api",
+            "-ig-auth-service",
+            "ig-iot-service",
+            "ig-mobile-application",
+          ]
+        branch: ["ref", "qa", "prod", "develop", "uat", "uat_tag"]
+      fail-fast: false
+
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+      - name: Clone target repository
+        run: |
+          git clone https://github.com/test-tf-organization/${{ matrix.repo }}.git target-repo
+          cd target-repo
+
+      - name: Check if branch exists and create if needed
+        run: |
+          cd target-repo
+
+          # Fetch all branches
+          git fetch --all
+
+          # Check if branch exists remotely
+          if git ls-remote --heads origin ${{ matrix.branch }} | grep -q ${{ matrix.branch }}; then
+            echo "Branch ${{ matrix.branch }} exists, checking out..."
+            git checkout ${{ matrix.branch }}
+          else
+            echo "Branch ${{ matrix.branch }} does not exist, creating from main/master..."
+            # Try to checkout main first, then master if main doesn't exist
+            if git ls-remote --heads origin main | grep -q main; then
+              git checkout main
+            else
+              git checkout master
+            fi
+            git checkout -b ${{ matrix.branch }}
+            git push -u origin ${{ matrix.branch }}
+          fi
+
+      - name: Create directory structure
+        run: |
+          cd target-repo
+          mkdir -p .github/PULL_REQUEST_TEMPLATE
+          mkdir -p .github/workflows
+
+      - name: Copy template files to target repository
+        run: |
+          cd target-repo
+
+          # Copy PR templates if they exist in the workflow repo
+          if [ -d "../repo-workflows/.github/PULL_REQUEST_TEMPLATE" ]; then
+            cp -r ../repo-workflows/.github/PULL_REQUEST_TEMPLATE/* .github/PULL_REQUEST_TEMPLATE/
+          fi
+
+          # Copy workflow files if they exist in the workflow repo
+          if [ -d "../repo-workflows/.github/workflows" ]; then
+            cp -r ../repo-workflows/.github/workflows/* .github/workflows/
+          fi
+
+          # Copy other .github files if they exist
+          if [ -f "../repo-workflows/.github/approval-requirements.json" ]; then
+            cp ../repo-workflows/.github/approval-requirements.json .github/
+          fi
+
+          if [ -f "../repo-workflows/.github/pull_request_template.md" ]; then
+            cp ../repo-workflows/.github/pull_request_template.md .github/
+          fi
+
+      - name: Create branch-specific CODEOWNERS
+        run: |
+          cd target-repo
+
+          case "${{ matrix.branch }}" in
+            "ref")
+              echo "* @infinitum360/tl-approval-team @infinitum360/mw-approval-team" > .github/CODEOWNERS
+              ;;
+            "qa")
+              echo "* @infinitum360/code-review-approval-team @infinitum360/qa-approval-team @infinitum360/osp-approval-team" > .github/CODEOWNERS
+              ;;
+            "prod")
+              echo "* @infinitum360/tl-approval-team @infinitum360/mw-approval-team" > .github/CODEOWNERS
+              ;;
+            "develop")
+              echo "* @infinitum360/qa-approval-team" > .github/CODEOWNERS
+              ;;
+            "uat")
+              echo "* @infinitum360/tl-approval-team @infinitum360/is-approval-team @infinitum360/pm-approval-team" > .github/CODEOWNERS
+              ;;
+            "uat_tag")
+              echo "*" > .github/CODEOWNERS
+              ;;
+          esac
+
+      - name: Handle .gitattributes template
+        run: |
+          cd target-repo
+
+          # Check if there's a .gitattributes template
+          if [ -f "../repo-workflows/.gitattributes" ]; then
+            # Use the template as base
+            cp ../repo-workflows/.gitattributes .gitattributes
+          else
+            # Create/Update .gitattributes manually
+            if [ -f .gitattributes ]; then
+              # Remove existing codeowner filter if present
+              grep -v "#codeowner file filter" .gitattributes > .gitattributes.tmp || true
+              grep -v ".github/CODEOWNERS merge=ours" .gitattributes.tmp > .gitattributes || true
+              rm -f .gitattributes.tmp
+            fi
+            
+            # Add our content
+            echo "" >> .gitattributes
+            echo "#codeowner file filter" >> .gitattributes
+            echo ".github/CODEOWNERS merge=ours" >> .gitattributes
+          fi
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          cd target-repo
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes detected"
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected"
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changes_detected == 'true' && inputs.dry_run != true
+        run: |
+          cd target-repo
+
+          git add .
+          git commit -m "Update standard .github files and .gitattributes for ${{ matrix.branch }} branch
+
+          - Updated PR templates (dev.md, qa.md, uat.md)
+          - Updated check-codeowner-approvals.yml workflow
+          - Updated approval-requirements.json
+          - Updated pull_request_template.md
+          - Updated CODEOWNERS for ${{ matrix.branch }} branch
+          - Updated .gitattributes with codeowner filter
+
+          [automated update]"
+
+          git push origin ${{ matrix.branch }}
+
+      - name: Create summary
+        run: |
+          cd target-repo
+          echo "## Summary for ${{ matrix.repo }} - ${{ matrix.branch }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.check_changes.outputs.changes_detected }}" == "true" ]; then
+            if [ "${{ inputs.dry_run }}" == "true" ]; then
+              echo "✅ Changes detected (DRY RUN - no actual changes made)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ Changes committed and pushed" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Files updated:" >> $GITHUB_STEP_SUMMARY
+            echo "- .github/PULL_REQUEST_TEMPLATE/dev.md" >> $GITHUB_STEP_SUMMARY
+            echo "- .github/PULL_REQUEST_TEMPLATE/qa.md" >> $GITHUB_STEP_SUMMARY
+            echo "- .github/PULL_REQUEST_TEMPLATE/uat.md" >> $GITHUB_STEP_SUMMARY
+            echo "- .github/workflows/check-codeowner-approvals.yml" >> $GITHUB_STEP_SUMMARY
+            echo "- .github/approval-requirements.json" >> $GITHUB_STEP_SUMMARY
+            echo "- .github/pull_request_template.md" >> $GITHUB_STEP_SUMMARY
+            echo "- .github/CODEOWNERS (branch-specific)" >> $GITHUB_STEP_SUMMARY
+            echo "- .gitattributes" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ No changes needed - files already up to date" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  summary:
+    needs: update-repositories
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Job Summary
+        run: |
+          echo "## Multi-Repository Update Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The workflow has finished updating all specified repositories and branches." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dry Run**: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branches**: ref, qa, prod, develop, uat, uat_tag" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repositories**: Check individual job results above" >> $GITHUB_STEP_SUMMARY

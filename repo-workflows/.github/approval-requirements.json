@@ -1,0 +1,24 @@
+{
+  "develop": {
+    "qa-approval-team": 1
+  },
+  "qa": {
+    "osp-approval-team": 1,
+    "qa-approval-team": 1,
+    "code-review-approval-team": 1
+  },
+  "uat_": {},
+  "uat": {
+    "tl-approval-team": 1,
+    "is-approval-team": 1,
+    "pm-approval-team": 1
+  },
+  "ref": {
+    "tl-approval-team": 1,
+    "mw-approval-team": 1
+  },
+  "prod": {
+    "tl-approval-team": 1,
+    "mw-approval-team": 1
+  }
+}

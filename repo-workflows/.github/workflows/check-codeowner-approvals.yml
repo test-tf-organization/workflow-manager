@@ -1,0 +1,151 @@
+name: Require Two Code Owner Approvals
+
+on:
+  pull_request_review:
+    types: [submitted, dismissed]
+
+jobs:
+  check-codeowner-approvals:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+      id-token: write
+      issues: read
+      statuses: write
+      actions: read
+
+    env:
+      GH_TOKEN: ${{ secrets.GH_PAT }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ env.GH_TOKEN }}
+          repository: infinitum360/ig-test-repo-workflow-automation
+
+      - name: Verify CODEOWNERS file exists
+        run: |
+          if [ -f .github/CODEOWNERS ]; then
+            echo "CODEOWNERS file found."
+          else
+            echo "CODEOWNERS file is missing!"
+            exit 1
+          fi
+
+      - name: Get PR Approvers and Validate Against CODEOWNER Teams
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ env.GH_TOKEN }}
+          script: |
+            const fs = require('fs').promises;
+            const path = '.github/approval-requirements.json';
+
+            // Load approval requirements from JSON file
+            let branchApprovalRequirements = {};
+            try {
+              const data = await fs.readFile(path, 'utf8');
+              branchApprovalRequirements = JSON.parse(data);
+              console.log(`Loaded approval requirements from ${path}`);
+            } catch (error) {
+              core.warning(`Failed to read ${path}, using empty requirements: ${error.message}`);
+            }
+
+            const prNumber = context.payload.pull_request.number;
+            const branchName = context.payload.pull_request.base.ref;
+
+            // Get PR reviews and approvers
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            const latestReviews = {};
+            for (const review of reviews) {
+              latestReviews[review.user.login] = review;
+            }
+            const approvers = Object.values(latestReviews)
+              .filter(r => r.state === 'APPROVED')
+              .map(r => r.user.login);
+
+            console.log("Approvers:", approvers);
+
+            // Load CODEOWNERS teams
+            const codeownersContent = await fs.readFile('.github/CODEOWNERS', 'utf8');
+            const teamOwners = codeownersContent
+              .split('\n')
+              .filter(line => !line.startsWith('#') && line.trim() !== '')
+              .flatMap(line => {
+                const [_, ...owners] = line.trim().split(/\s+/);
+                return owners.filter(o => o.startsWith('@') && o.includes('/'));
+              });
+
+            // Get members of each team and build map teamSlug => Set of members
+            const teamMembersMap = new Map();
+            for (const teamRef of teamOwners) {
+              const [org, teamSlug] = teamRef.slice(1).split('/');
+              try {
+                const { data: members } = await github.rest.teams.listMembersInOrg({
+                  org,
+                  team_slug: teamSlug,
+                });
+                teamMembersMap.set(teamSlug, new Set(members.map(m => m.login)));
+              } catch (error) {
+                console.warn(`Could not fetch members for team ${teamRef}: ${error.message}`);
+              }
+            }
+
+            // Filter approvers who are in any CODEOWNER team
+            const matchedApprovers = approvers.filter(user => {
+              for (const membersSet of teamMembersMap.values()) {
+                if (membersSet.has(user)) return true;
+              }
+              return false;
+            });
+
+            console.log("Matched CODEOWNER approvers:", matchedApprovers);
+
+            // Count approvals per team
+            const approvalsPerTeam = {};
+            for (const [teamSlug, members] of teamMembersMap.entries()) {
+              const count = matchedApprovers.filter(user => members.has(user)).length;
+              approvalsPerTeam[teamSlug] = count;
+            }
+            console.log("Approvals per team:", approvalsPerTeam);
+
+            // Find matching branch key (exact or prefix match)
+            function getMatchingBranchKey(branch) {
+              if (branchApprovalRequirements[branch]) return branch;
+              for (const key of Object.keys(branchApprovalRequirements)) {
+                if (key.endsWith('_') && branch.startsWith(key)) return key;
+              }
+              return null;
+            }
+            const matchedBranchKey = getMatchingBranchKey(branchName);
+
+            if (!matchedBranchKey) {
+              console.log(`No approval requirements defined for branch: ${branchName}`);
+              return;
+            }
+
+            const requirements = branchApprovalRequirements[matchedBranchKey];
+
+            // Validate required team approval counts
+            const failures = [];
+            for (const [team, reqCount] of Object.entries(requirements)) {
+              const approvedCount = approvalsPerTeam[team] || 0;
+              console.log(`Team "${team}" requires ${reqCount}, has ${approvedCount} approvals.`);
+              if (approvedCount < reqCount) failures.push(`${team} (${approvedCount} < ${reqCount})`);
+            }
+
+            if (failures.length) {
+              core.setFailed(`Missing required approvals from teams: ${failures.join(', ')}`);
+            } else {
+              console.log("All required team approvals met!");
+            }
+
+
+
+        
