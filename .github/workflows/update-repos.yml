@@ -106,19 +106,19 @@ jobs:
 
           case "${{ matrix.branch }}" in
             "ref")
-              echo "* @infinitum360/tl-approval-team @infinitum360/mw-approval-team" > .github/CODEOWNERS
+              echo "* @test-tf-organization/tl-approval-team @test-tf-organization/mw-approval-team" > .github/CODEOWNERS
               ;;
             "qa")
-              echo "* @infinitum360/code-review-approval-team @infinitum360/qa-approval-team @infinitum360/osp-approval-team" > .github/CODEOWNERS
+              echo "* @test-tf-organization/code-review-approval-team @test-tf-organization/qa-approval-team @test-tf-organization/osp-approval-team" > .github/CODEOWNERS
               ;;
             "prod")
-              echo "* @infinitum360/tl-approval-team @infinitum360/mw-approval-team" > .github/CODEOWNERS
+              echo "* @test-tf-organization/tl-approval-team @test-tf-organization/mw-approval-team" > .github/CODEOWNERS
               ;;
             "develop")
-              echo "* @infinitum360/qa-approval-team" > .github/CODEOWNERS
+              echo "* @test-tf-organization/qa-approval-team" > .github/CODEOWNERS
               ;;
             "uat")
-              echo "* @infinitum360/tl-approval-team @infinitum360/is-approval-team @infinitum360/pm-approval-team" > .github/CODEOWNERS
+              echo "* @test-tf-organization/tl-approval-team @test-tf-organization/is-approval-team @test-tf-organization/pm-approval-team" > .github/CODEOWNERS
               ;;
             "uat_tag")
               echo "*" > .github/CODEOWNERS
