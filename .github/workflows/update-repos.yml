@@ -148,11 +148,21 @@ jobs:
             echo ".github/CODEOWNERS merge=ours" >> .gitattributes
           fi
 
+      - name: Stage copied & created files
+        run: |
+          cd target-repo
+          git add .github/ .gitattributes || true
+
+      - name: "Debug: Show git status"
+        run: |
+          cd target-repo
+          git status
+          git diff --stat
+
       - name: Check for changes
         id: check_changes
         run: |
           cd target-repo
-
           if git diff --quiet && git diff --cached --quiet; then
             echo "No changes detected"
             echo "changes_detected=false" >> $GITHUB_OUTPUT
