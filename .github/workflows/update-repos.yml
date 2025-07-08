@@ -25,7 +25,7 @@ jobs:
             "ig-web-app",
             "ig-docs",
             "ig-analytics-api",
-            "-ig-auth-service",
+            "ig-auth-service",
             "ig-iot-service",
             "ig-mobile-application",
           ]
