@@ -45,7 +45,7 @@ jobs:
 
       - name: Clone target repository
         run: |
-          https://x-access-token:${{ secrets.GH_PAT }}@github.com/test-tf-organization/${{ matrix.repo }}.git
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/test-tf-organization/${{ matrix.repo }}.git target-repo
           cd target-repo
 
       - name: Check if branch exists and create if needed
