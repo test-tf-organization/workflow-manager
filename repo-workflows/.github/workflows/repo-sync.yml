@@ -24,6 +24,7 @@ jobs:
         run: |
           SOURCE_REPO="${GITHUB_REPOSITORY##*/}"
           TARGET_REPO="igt-${SOURCE_REPO#ig-}"
+          echo "source_repo=$SOURCE_REPO" >> $GITHUB_OUTPUT
           echo "target_repo=$TARGET_REPO" >> $GITHUB_OUTPUT
 
       - name: Clone target repository
