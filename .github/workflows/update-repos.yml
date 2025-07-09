@@ -17,19 +17,37 @@ env:
   GH_TOKEN: ${{ secrets.GH_PAT }}
 
 jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read and generate matrix
+        id: set-matrix
+        run: |
+          json=$(cat repo-workflows/matrix-config.json)
+
+          repos=$(echo "$json" | jq -r '.repos[]')
+          branches=$(echo "$json" | jq -r '.branches[]')
+
+          matrix="["
+          for repo in $repos; do
+            for branch in $branches; do
+              matrix="$matrix{\"repo\":\"$repo\",\"branch\":\"$branch\"},"
+            done
+          done
+          matrix="${matrix%,}]"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   update-repositories:
+    needs: generate-matrix
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        repo: [
-            "ig-web-app",
-            "ig-docs",
-            "ig-analytics-api",
-            "ig-auth-service",
-            "ig-iot-service",
-            "ig-mobile-application",
-          ]
-        branch: ["ref", "qa", "prod", "develop", "uat", "uat_tag"]
+        include: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
       fail-fast: false
 
     steps:

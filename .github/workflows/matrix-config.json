@@ -1,0 +1,11 @@
+{
+  "repos": [
+    "ig-web-app",
+    "ig-docs",
+    "ig-analytics-api",
+    "ig-auth-service",
+    "ig-iot-service",
+    "ig-mobile-application"
+  ],
+  "branches": ["ref", "qa", "prod", "develop", "uat", "uat_tag"]
+}
