@@ -28,22 +28,20 @@ jobs:
       - name: Read and generate matrix
         id: set-matrix
         run: |
-          echo "Current dir: $(pwd)"
-          ls -R
 
-          # json=$(cat ./matrix-config.json)
+          json=$(cat .github/workflows/matrix-config.json)
 
-          # repos=$(echo "$json" | jq -r '.repos[]')
-          # branches=$(echo "$json" | jq -r '.branches[]')
+          repos=$(echo "$json" | jq -r '.repos[]')
+          branches=$(echo "$json" | jq -r '.branches[]')
 
-          # matrix="["
-          # for repo in $repos; do
-          #   for branch in $branches; do
-          #     matrix="$matrix{\"repo\":\"$repo\",\"branch\":\"$branch\"},"
-          #   done
-          # done
-          # matrix="${matrix%,}]"
-          # echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          matrix="["
+          for repo in $repos; do
+            for branch in $branches; do
+              matrix="$matrix{\"repo\":\"$repo\",\"branch\":\"$branch\"},"
+            done
+          done
+          matrix="${matrix%,}]"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   update-repositories:
     needs: generate-matrix
