@@ -28,7 +28,7 @@ jobs:
       - name: Read and generate matrix
         id: set-matrix
         run: |
-          json=$(cat repo-workflows/matrix-config.json)
+          json=$(cat ./matrix-config.json)
 
           repos=$(echo "$json" | jq -r '.repos[]')
           branches=$(echo "$json" | jq -r '.branches[]')
