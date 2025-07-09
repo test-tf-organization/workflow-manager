@@ -114,7 +114,7 @@ jobs:
           if [ -d "../repo-workflows/.github/workflows" ]; then
             mkdir -p .github/workflows
             if [[ "${{ matrix.repo }}" == igt-* ]]; then
-              echo "Skipping repo-sync.yml for ${matrix.repo}"
+              echo "Skipping repo-sync.yml for ${{matrix.repo}}"
               rsync -av --exclude=repo-sync.yml ../repo-workflows/.github/workflows/ .github/workflows/
             else
               cp -r ../repo-workflows/.github/workflows/* .github/workflows/
