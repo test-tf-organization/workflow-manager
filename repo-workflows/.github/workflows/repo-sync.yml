@@ -1,4 +1,4 @@
-name: Sync to IGT Web App
+name: Sync to IGT Repositories
 
 on:
   push:
@@ -19,11 +19,18 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
+      - name: Get target repo name
+        id: repo
+        run: |
+          SOURCE_REPO="${GITHUB_REPOSITORY##*/}"
+          TARGET_REPO="igt-${SOURCE_REPO#ig-}"
+          echo "target_repo=$TARGET_REPO" >> $GITHUB_OUTPUT
+
       - name: Clone target repository
         run: |
           # Clone target repo outside the source directory to avoid syncing it
           cd ..
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/kithmih/igt-web-app.git target-repo
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/kithmih/${{ steps.repo.outputs.target_repo }} target-repo
           cd $GITHUB_WORKSPACE
 
       - name: Determine target branch
@@ -66,7 +73,7 @@ jobs:
             # Use the original commit message if available, otherwise use a default
             COMMIT_MSG="${{ github.event.head_commit.message }}"
             if [ -z "$COMMIT_MSG" ]; then
-              COMMIT_MSG="Sync from ig-web repo - Branch: ${{ steps.branch.outputs.source_branch }}"
+              COMMIT_MSG="Sync from ${{ steps.repo.outputs.source_repo }} repo - Branch: ${{ steps.branch.outputs.source_branch }}"
             fi
             
             git commit -m "$COMMIT_MSG"
