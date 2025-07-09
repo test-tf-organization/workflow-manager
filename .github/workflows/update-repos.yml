@@ -80,12 +80,17 @@ jobs:
             git checkout ${{ matrix.branch }}
           else
             echo "Branch ${{ matrix.branch }} does not exist, creating from main/master..."
+
             # Try to checkout main first, then master if main doesn't exist
             if git ls-remote --heads origin main | grep -q main; then
               git checkout main
-            else
+            elif git ls-remote --heads origin master | grep -q master; then
               git checkout master
+            else
+              echo "❌ Neither 'main' nor 'master' branch exists in ${{ matrix.repo }}. Skipping..."
+              exit 0
             fi
+
             git checkout -b ${{ matrix.branch }}
             git push -u origin ${{ matrix.branch }}
           fi
