@@ -1,6 +1,7 @@
 {
   "repos": [
     "ig-web-app",
+    "igt-web-app",
     "ig-docs",
     "ig-analytics-api",
     "ig-auth-service",

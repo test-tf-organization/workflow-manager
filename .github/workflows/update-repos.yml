@@ -105,9 +105,15 @@ jobs:
             cp -r ../repo-workflows/.github/PULL_REQUEST_TEMPLATE/* .github/PULL_REQUEST_TEMPLATE/
           fi
 
-          # Copy workflow files if they exist in the workflow repo
+          # Copy workflow files if they exist, exclude repo-sync.yml for igt-* repos
           if [ -d "../repo-workflows/.github/workflows" ]; then
-            cp -r ../repo-workflows/.github/workflows/* .github/workflows/
+            mkdir -p .github/workflows
+            if [[ "${{ matrix.repo }}" == igt-* ]]; then
+              echo "Skipping repo-sync.yml for ${matrix.repo}"
+              rsync -av --exclude=repo-sync.yml ../repo-workflows/.github/workflows/ .github/workflows/
+            else
+              cp -r ../repo-workflows/.github/workflows/* .github/workflows/
+            fi
           fi
 
           # Copy other .github files if they exist
