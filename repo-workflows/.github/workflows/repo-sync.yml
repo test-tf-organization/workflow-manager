@@ -31,7 +31,7 @@ jobs:
         run: |
           # Clone target repo outside the source directory to avoid syncing it
           cd ..
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/kithmih/${{ steps.repo.outputs.target_repo }} target-repo
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/test-tf-organization/${{ steps.repo.outputs.target_repo }} target-repo
           cd $GITHUB_WORKSPACE
 
       - name: Determine target branch
