@@ -1,4 +1,4 @@
-name: Require Two Code Owner Approvals
+name: Require Code Owner Approvals
 
 on:
   pull_request_review:
