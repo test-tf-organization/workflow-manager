@@ -19,11 +19,17 @@ jobs:
       GH_TOKEN: ${{ secrets.GH_PAT }}
 
     steps:
+      - name: Get source repo name
+        id: repo
+        run: |
+          SOURCE_REPO="${GITHUB_REPOSITORY##*/}"
+          echo "source_repo=$SOURCE_REPO" >> $GITHUB_OUTPUT
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ env.GH_TOKEN }}
-          repository: infinitum360/ig-test-repo-workflow-automation
+          repository: test-tf-organization/${{ steps.repo.outputs.source_repo }}
 
       - name: Verify CODEOWNERS file exists
         run: |
@@ -145,7 +151,3 @@ jobs:
             } else {
               console.log("All required team approvals met!");
             }
-
-
-
-        
