@@ -111,7 +111,6 @@ jobs:
 
           # Copy workflow files if they exist, exclude repo-sync.yml for igt-* repos
           if [ -d "../repo-workflows/.github/workflows" ]; then
-            mkdir -p .github/workflows
             if [[ "${{ matrix.repo }}" == igt-* ]]; then
               echo "Skipping repo-sync.yml for ${{matrix.repo}}"
               rsync -av --exclude=repo-sync.yml ../repo-workflows/.github/workflows/ .github/workflows/
