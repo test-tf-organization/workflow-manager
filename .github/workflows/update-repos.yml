@@ -78,15 +78,15 @@ jobs:
             echo "Branch ${{ matrix.branch }} exists, checking out..."
             git checkout ${{ matrix.branch }}
           else
-            echo "Branch ${{ matrix.branch }} does not exist, creating from main/master..."
+            echo "Branch ${{ matrix.branch }} does not exist, creating from main/develop..."
 
-            # Try to checkout main first, then master if main doesn't exist
+            # Try to checkout main first, then develop if main doesn't exist
             if git ls-remote --heads origin main | grep -q main; then
               git checkout main
-            elif git ls-remote --heads origin master | grep -q master; then
-              git checkout master
+            elif git ls-remote --heads origin develop | grep -q develop; then
+              git checkout develop
             else
-              echo "❌ Neither 'main' nor 'master' branch exists in ${{ matrix.repo }}. Skipping..."
+              echo "❌ Neither 'main' nor 'develop' branch exists in ${{ matrix.repo }}. Skipping..."
               exit 0
             fi
 
